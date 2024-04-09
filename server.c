@@ -5,13 +5,49 @@
 #include <string.h>
 
 #define PORT 7777 
-#define MAX_CONNECTIONS 5
+#define MAX_CONNECTIONS 1
+
+int command_mode(socket, server_socket){
+    puts("You're in command mode");
+
+    while (1){
+        char input[128] = {0};
+        char buff[1024] = {0};
+        printf("\n$ ");
+        fgets(input, 128, stdin);
+        if (!strcmp(input, "exit")) {
+            close(socket);
+            close(server_socket);
+            puts("Desconexión exitosa");
+            break;
+        }
+        send(socket, input, sizeof(input), 0);
+
+        read(socket, buff, 1024);
+        if (!strcmp(buff, "error")){
+            printf("ERROR: %s", buff);
+            break;
+        }
+
+
+        if (!strcmp(buff, "Server status: listen")){
+            while (1){
+                if (!strcmp(buff, "Server status: stop-listen")) {
+                    break;
+                }
+                for (int i = 0; i < 1024; i++) buff[i] = 0;
+                read(socket, buff, 1024);
+                printf("%s", buff);
+            }
+        }
+    }
+}
 
 int main(){
     int client_socket, server_socket;
     struct sockaddr_in server_address, client_address;
     socklen_t client_address_length;
-    char *welldone = "Connection done!\n";
+    char *welldone = "Connection!";
 
     server_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (server_socket == -1){
@@ -46,8 +82,11 @@ int main(){
     }
 
     // Send msg
-    send(client_socket, welcome_msg, strlen(welldone), 0);
+    send(client_socket, welldone, strlen(welldone), 0);
     printf("Mensaje de bienvenida enviado al cliente.\n");
+
+    // Default mode
+    command_mode(client_socket, server_socket);
 
     // Cerrar sockets
     close(server_socket);
